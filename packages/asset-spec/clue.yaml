@@ -1,0 +1,62 @@
+## 线索（Clue）— 跨镜头追踪的关键视觉元素
+##
+## 灵感来源：ArcReel "线索追踪 (Clues)" 概念
+##
+## 与 prop 的区别：
+##   - prop 是"可以多次出现的物件"（如咖啡杯）
+##   - clue 是"必须保持视觉连续的关键元素"（如带血手帕、定情信物、刻字怀表）
+
+asset_type: clue
+storage_bucket: clues
+file_layout:
+  reference_image: reference.png
+  meta: meta.json
+
+sheet_fields:
+  name:
+    type: string
+    required: true
+    unique_per_project: true
+
+  trace_episodes:
+    type: array<int>
+    required: true
+    description: 出现的集数
+
+  visual_anchor:
+    type: text
+    required: true
+    description: 必须保持一致的视觉特征（颜色、形状、刻字、磨损痕迹...）
+
+  state_changes:
+    type: array<object>
+    description: 跨集状态变化（干净→染血→破损）
+    fields:
+      episode: { type: int }
+      state: { type: string }
+      visual_diff: { type: text }
+
+  importance:
+    type: enum
+    values: [supporting, key, plot_critical]
+    default: key
+
+  prompt_en:
+    type: text
+    required: true
+
+  prompt_zh:
+    type: text
+
+patch_whitelist:
+  - trace_episodes
+  - visual_anchor
+  - state_changes
+  - importance
+  - prompt_en
+  - prompt_zh
+
+shareable_in_global_library: false   # 线索通常是项目专属
+
+consistency_check:
+  visual_anchor_clip_score: 0.7      # 跨集时必须保持一致

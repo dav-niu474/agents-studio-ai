@@ -1,0 +1,103 @@
+Agents Studio AI · Third-Party Acknowledgements
+================================================
+
+本仓库的设计与原型实现深度参考了以下开源项目。
+所有借鉴的内容（结构、接口、思路）均明确标注于 docs/INSIGHTS.md 与各 SKILL.md 文件中。
+具体复用代码（在 M1 阶段陆续落地时）将在对应文件头部保留原作者署名。
+
+参考项目（按字母序）：
+
+----------------------------------------------------------------------
+1. ArcReel
+   仓库: https://github.com/ArcReel/ArcReel
+   协议: AGPL-3.0
+   主要借鉴:
+     - Skill + Subagent 多智能体架构
+     - lib/asset_types.py 资产 Spec 中央化思想
+     - GenerationQueue (lease-based, image/video 双通道)
+     - SessionActor 串行化模式
+     - bwrap 沙箱隔离
+     - compose-video Skill 实现思路
+     - Custom Provider 自动发现机制
+
+2. BigBanana-AI-Director
+   仓库: https://github.com/shuyu-labs/BigBanana-AI-Director
+   协议: CC BY-NC-SA 4.0
+   主要借鉴:
+     - 关键帧驱动 (Start/End Frame 插值) 概念
+     - Project → Season → Episode 三级容器
+     - 4 阶段流程模型
+
+3. huobao-drama
+   仓库: https://github.com/chatfire-AI/huobao-drama
+   协议: CC BY-NC-SA 4.0
+   主要借鉴:
+     - SKILL.md 标准 (YAML frontmatter + Markdown)
+     - Provider Adapter 接口设计 (services/adapters/types.ts)
+     - 5 个核心 Agent 设计 (script_rewriter / extractor / storyboard_breaker / voice_assigner / grid_prompt_generator)
+     - 15 字段分镜模板
+     - 宫格图三种子模式 (first_frame / first_last / multi_ref)
+
+4. Jellyfish
+   仓库: https://github.com/Forget-C/Jellyfish
+   协议: Apache-2.0
+   主要借鉴:
+     - Shot Readiness 状态机
+     - 全局 Task Center 设计
+     - 资产实体共享模型
+
+5. lumenx (Alibaba)
+   仓库: https://github.com/alibaba/lumenx
+   协议: MIT
+   主要借鉴:
+     - 6 阶段 SOP (Script → ArtDirection → Assets → StoryBoard → Motion → Assembly)
+     - 资产先全身图再衍生三视图/头像/衣橱的流程
+     - Vendor-Direct 接入模式
+     - 抽卡机制 (多 Batch Size 生成 + 择优)
+
+6. moyin-creator
+   仓库: https://github.com/MemeCalculate/moyin-creator
+   协议: AGPL-3.0
+   主要借鉴:
+     - 6 层身份锚点 (face_shape / hair_signature / color_palette / silhouette / signature_prop / scene_context)
+     - @Image / @Video / @Audio 多模态引用语法
+     - Seedance 2.0 多镜头合并叙事
+     - 三层提示词融合 (动作 + 镜头语言 + 对白唇形同步)
+
+7. Pixelle-Video (AIDC-AI)
+   仓库: https://github.com/AIDC-AI/Pixelle-Video
+   协议: Apache-2.0
+   主要借鉴:
+     - BasePipeline 抽象设计
+     - HTML 模板按尺寸分组 (1080x1920 / 1920x1080 / 1080x1080)
+     - ComfyUI 工作流可替换思路
+
+8. Toonflow-app (HBAI-Ltd)
+   仓库: https://github.com/HBAI-Ltd/Toonflow-app
+   协议: Apache-2.0 + 商业附加协议
+   主要借鉴 (致谢量最大):
+     - art_skills/<style>/ 画风包结构 (本仓库 art-styles/ 完全照搬)
+     - 三层 Agent (决策/执行/监督) 协作模式
+     - 持久化 Agent 记忆思路
+     - 章节事件图谱概念
+     - 可编程供应商系统思路
+
+9. waoowaoo
+   仓库: https://github.com/saturndec/waoowaoo
+   协议: 自定义协议
+   主要借鉴:
+     - BullMQ 任务队列工程化思路
+     - SSE 实时进度推送
+
+补充参考 (商业产品):
+   - MovieFlo.AI (https://www.moviefloai.com): 完整 idea→clips 工作流的产品形态参考
+   - Google Flow: 工具集成 (Whisk + ImageFX) 的产品参考
+
+----------------------------------------------------------------------
+
+本仓库 M0 阶段所有源码均为原创编写。
+M1+ 阶段如直接采用上述任一项目的代码（如 huobao-drama 的具体 adapter 实现、
+ArcReel 的 compose-video.py 脚本），将在对应文件头部以注释形式保留原始版权声明
+与许可证链接。
+
+如有任何 attribution 错漏或许可证适用性问题，请提 issue 告知。

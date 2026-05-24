@@ -1,0 +1,82 @@
+style_id: 2D-chinese-anime
+display_name: 国风二次元
+display_name_en: Chinese Anime (Neo-Chic)
+version: 1.0.0
+author: agents-studio-ai
+license: Apache-2.0
+attribution: Adapted from Toonflow-app `2D_chinese_guofeng`
+
+tags:
+  - 仙侠
+  - 古装
+  - 国风
+  - 新国潮
+  - 二次元
+  - 动画
+
+suitable_for:
+  - 仙侠 / 修真 / 玄幻
+  - 古装言情
+  - 武侠 / 江湖
+  - 国风奇幻
+  - 神话传说
+
+not_suitable_for:
+  - 写实电影感
+  - 赛博朋克 / 科幻
+  - 现代写实题材
+  - 西方魔幻
+
+recommended_models:
+  image:
+    primary: [seedream-5.0, nano-banana-pro]
+    fallback: [gpt-image-2, wanx-2.5]
+  video:
+    primary: [seedance-2.0, veo-3.1]
+    fallback: [wan-2.6, kling-v3]
+
+# 用于 prompt 注入的核心锚点词
+positive_anchors_zh:
+  - 国风二次元
+  - 新国潮美学
+  - 日式动画渲染
+  - 赛璐璐平涂
+  - 细腻笔触
+  - 电影质感
+  - 高细节
+  - 鲜明色彩
+
+positive_anchors_en:
+  - "Chinese style anime"
+  - "neo-chic oriental aesthetic"
+  - "cel-shaded"
+  - "Japanese animation rendering"
+  - "fine brushwork"
+  - "cinematic quality"
+  - "vivid colors"
+  - "high detail"
+
+negative_anchors_zh:
+  - 写实摄影
+  - 3D渲染
+  - 西方奇幻
+  - 赛博朋克
+  - 过度现代元素
+  - 模糊画质
+  - 低多边形
+
+negative_anchors_en:
+  - "photorealistic"
+  - "realistic photography"
+  - "3D render"
+  - "low-poly"
+  - "western fantasy"
+  - "cyberpunk"
+  - "modern elements"
+  - "no text, no watermark, no subtitles"
+
+# 画质锁定词（每张图都强制加）
+quality_lock_zh: 国风二次元高清渲染，高细节，细腻线条，赛璐璐平涂感，电影质感，画面无字幕、无水印、无标题叠字
+quality_lock_en: "Chinese style anime, high resolution, fine line work, cel-shaded look, cinematic quality, no subtitles, no captions, no watermark, no title overlay"
+
+preview_image: images/preview.png

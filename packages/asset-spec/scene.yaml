@@ -1,0 +1,64 @@
+asset_type: scene
+storage_bucket: scenes
+file_layout:
+  reference_image: reference.png
+  variants_dir: variants/             # 不同时间/天气衍生
+  meta: meta.json
+
+sheet_fields:
+  name:
+    type: string
+    required: true
+    unique_per_project: true
+
+  location:
+    type: string
+    required: true
+    description: 具体地点（咖啡厅 / 海边小屋 / 太和殿）
+
+  time_of_day:
+    type: enum
+    values: [dawn, morning, noon, afternoon, dusk, evening, night, late_night]
+    required: true
+
+  ambience:
+    type: text
+    description: 整体氛围
+
+  lighting:
+    type: enum
+    values: [natural_daylight, golden_hour, blue_hour, artificial_warm, artificial_cool, mixed, candlelight, neon, moonlight]
+
+  era:
+    type: string
+    description: 时代背景（清朝 / 民国 / 现代 / 未来 / 仙侠世界）
+
+  prompt_en:
+    type: text
+    required: true
+    description: 用于图像模型的英文提示词，**纯背景，不含人物**
+
+  prompt_zh:
+    type: text
+    description: 中文模式提示词
+
+  scene_type:
+    type: enum
+    values: [interior, exterior, mixed]
+    required: true
+
+patch_whitelist:
+  - location
+  - time_of_day
+  - ambience
+  - lighting
+  - era
+  - prompt_en
+  - prompt_zh
+  - scene_type
+
+shareable_in_global_library: true
+
+consistency_check:
+  color_palette_delta_e: 30
+  art_style_clip_score: 0.5

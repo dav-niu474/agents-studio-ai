@@ -1,0 +1,104 @@
+## 角色资产 Spec
+##
+## 灵感来源：ArcReel lib/asset_types.py 的 ASSET_SPECS 思路
+## 通过统一 Spec 驱动：路由工厂、bucket key、表单字段、PATCH 白名单
+##
+## 新增资产类型只需添加 yaml + 实现对应 service，前后端表单/路由自动适配。
+
+asset_type: character
+storage_bucket: characters
+file_layout:
+  reference_image: reference.png         # 必生成（基准图）
+  three_views: three_views.png           # 可选
+  avatar: avatar.png                     # 可选
+  wardrobe_dir: wardrobe/                # 多套服饰
+  meta: meta.json
+
+# 数据字段 schema
+sheet_fields:
+  name:
+    type: string
+    required: true
+    unique_per_project: true
+    description: 角色全名
+
+  aliases:
+    type: array<string>
+    description: 别名/昵称（用于剧本中识别）
+
+  role_type:
+    type: enum
+    values: [protagonist, supporting, extra]
+    required: true
+
+  appearance:
+    type: object
+    required: true
+    fields:
+      gender: { type: enum, values: [male, female, other] }
+      age_range: { type: enum, values: [child, teen, young_adult, adult, elder] }
+      body_type: { type: enum, values: [slim, average, muscular, plump] }
+      facial: { type: text, min_length: 30 }
+      hair: { type: text }
+      clothing: { type: text }
+      distinguishing_features: { type: text }
+    text_summary_min_chars: 300
+    text_summary_max_chars: 500
+
+  personality_tags:
+    type: array<string>
+    min_items: 3
+    max_items: 5
+
+  # 6 层身份锚点（关键！）
+  identity_anchors:
+    type: object
+    required: true
+    fields:
+      face_shape: { type: string, required: true }
+      hair_signature: { type: string, required: true }
+      color_palette: { type: string, required: true, hint: "建议 2-3 色 hex" }
+      silhouette: { type: string, required: true }
+      signature_prop: { type: string }
+      scene_context: { type: string }
+
+  background:
+    type: text
+    description: 角色背景与关系
+
+  # 衣橱（仿 BigBanana）
+  wardrobe:
+    type: array<object>
+    fields:
+      outfit_id: { type: string }
+      description: { type: text }
+      occasion: { type: enum, values: [casual, formal, combat, pajamas, special] }
+
+  # TTS 关联
+  voice_id:
+    type: string
+    nullable: true
+    set_by: 08-voice-assigner
+
+  cloned_voice_path:
+    type: file_path
+    nullable: true
+
+# PATCH 白名单：哪些字段允许后续修改
+patch_whitelist:
+  - appearance
+  - personality_tags
+  - identity_anchors
+  - wardrobe
+  - voice_id
+  - cloned_voice_path
+
+# 跨项目共享
+shareable_in_global_library: true
+
+# 一致性校验阈值
+consistency_check:
+  face_similarity_threshold: 0.7      # ArcFace cosine
+  color_palette_delta_e: 25
+  signature_prop_clip_score: 0.6
+  min_identity_anchors_passed: 4      # 6 个锚点中至少 4 个可视检测通过

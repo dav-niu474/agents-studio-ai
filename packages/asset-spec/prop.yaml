@@ -1,0 +1,42 @@
+asset_type: prop
+storage_bucket: props
+file_layout:
+  reference_image: reference.png
+  meta: meta.json
+
+sheet_fields:
+  name:
+    type: string
+    required: true
+    unique_per_project: true
+
+  prop_type:
+    type: enum
+    values: [daily, weapon, vehicle, decoration, symbolic, food, document, jewelry, magical]
+    required: true
+
+  description:
+    type: text
+    required: true
+    description: 外观与用途
+
+  importance:
+    type: enum
+    values: [low, medium, high]
+    default: medium
+
+  prompt_en:
+    type: text
+    required: true
+
+  prompt_zh:
+    type: text
+
+patch_whitelist:
+  - prop_type
+  - description
+  - importance
+  - prompt_en
+  - prompt_zh
+
+shareable_in_global_library: true
