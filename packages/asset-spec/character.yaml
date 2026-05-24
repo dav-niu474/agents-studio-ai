@@ -7,12 +7,23 @@
 
 asset_type: character
 storage_bucket: characters
+
+# 文件布局 + 视觉资产产出契约（按 weight tier 强制）
+#
+# 不是"可选"——只是不同 weight 的角色，必产清单不同：
+#   - weight ≥ 7 (主角 / Tier-A)：四件套必齐 + 衣橱按 wardrobe[] 全套必齐
+#   - weight 4-6 (重要配角 / Tier-B)：reference + three_views + avatar 必齐；衣橱 ≥ 2 套
+#   - weight ≤ 3 (群演 / Tier-C)：reference + avatar 必齐；three_views 可选；衣橱仅默认 1 套
+#
+# 这一档位由 02-show-planner 的 asset_quality_tier 全局调（economy/standard/premium）。
+# 默认 standard：上表为基线。economy 下 Tier-B/C 可降一级；premium 下全角色视为 Tier-A。
+
 file_layout:
-  reference_image: reference.png         # 必生成（基准图）
-  three_views: three_views.png           # 可选
-  avatar: avatar.png                     # 可选
-  wardrobe_dir: wardrobe/                # 多套服饰
-  meta: meta.json
+  reference_image: reference.png         # 必产（所有 tier）— 全身定妆基准图
+  three_views: three_views.png           # Tier-A/B 必产；Tier-C 可选 — 正/侧/背三视图
+  avatar: avatar.png                     # 必产（所有 tier）— 头像特写，对话镜头唯一可信参考
+  wardrobe_dir: wardrobe/                # Tier-A 全套必产；Tier-B ≥2 套必产；Tier-C 不产
+  meta: meta.json                        # 必产 — 6 层锚点 + 衣橱清单 + 戏份分布
 
 # 数据字段 schema
 sheet_fields:
@@ -102,3 +113,54 @@ consistency_check:
   color_palette_delta_e: 25
   signature_prop_clip_score: 0.6
   min_identity_anchors_passed: 4      # 6 个锚点中至少 4 个可视检测通过
+
+# 角色权重分档（来自 04-asset-extractor 计算）
+# 决定 06-character-designer 的视觉资产产出深度
+weight_tier:
+  protagonist:                         # Tier-A: weight ≥ 7
+    weight_range: [7, 10]
+    required_assets:
+      - reference.png
+      - three_views.png
+      - avatar.png
+      - wardrobe/*  (按 wardrobe[] 全套)
+    estimated_image_count: 5+          # ≥ 1 + 1 + 1 + N 套衣橱
+  supporting:                          # Tier-B: weight 4-6
+    weight_range: [4, 6]
+    required_assets:
+      - reference.png
+      - three_views.png
+      - avatar.png
+      - wardrobe/*  (至少 2 套：default + 一套场合服)
+    estimated_image_count: 5
+  extra:                               # Tier-C: weight ≤ 3
+    weight_range: [1, 3]
+    required_assets:
+      - reference.png
+      - avatar.png
+    optional_assets:
+      - three_views.png
+      - wardrobe/*
+    estimated_image_count: 2
+
+# 视觉资产产出契约（与下游 06-character-designer 一致）
+visual_asset_contract:
+  generated_by: 06-character-designer
+  generation_order:                    # 强制串行（不可并行）
+    - reference.png                    # Step 1 文生图，作为后续所有图的 IPAdapter 基准
+    - three_views.png                  # Step 2 图生图，输入 reference.png + 三视图布局
+    - avatar.png                       # Step 3 图生图，输入 reference.png，头部高清裁切
+    - wardrobe/<outfit>.png            # Step 4 图生图，输入 reference.png，逐套换装
+  consistency_check_per_asset:
+    reference: face_similarity vs analysis.appearance（描述层一致性）
+    three_views: face_similarity vs reference ≥ 0.85
+    avatar: face_similarity vs reference ≥ 0.90
+    wardrobe: face_similarity vs reference ≥ 0.80, color_palette vs identity_anchors ΔE ≤ 25
+
+# 反模式（spec 层禁止）
+anti_patterns:
+  - 没有 reference.png 就生成 three_views/avatar/wardrobe（必漂移）
+  - Tier-A/B 角色没有 three_views（侧面/背面镜头无参考必崩）
+  - Tier-A/B 角色没有 avatar（中景/特写镜头无高清头部参考必糊）
+  - 跳过 generation_order 并行生成
+  - reference.png 一致性未通过就保存（污染下游所有衍生图）

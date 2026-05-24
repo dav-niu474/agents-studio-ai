@@ -70,7 +70,7 @@ required_tools:
 | 4 | `production_plan.locked && !scripts/index.json` | **03-script-writer** | 全集剧本 |
 | 5 | `scripts/index.json && !assets/index.json` | **04-asset-extractor** | 资产提取 |
 | 6 | `assets/index.json && !project.art_style_id` | **05-art-director** | 画风定调 |
-| 7 | `art_style && characters[].reference_image is missing for any weight≥4 character` | **06-character-designer** with target=character | 角色定妆 |
+| 7 | `art_style && characters[].visual_assets is incomplete for any tier` | **06-character-designer** with target=character | 角色定妆 |
 | 8 | `art_style && scenes[].reference_image is missing for any main scene` | **06-character-designer** with target=scene | 场景图 |
 | 9 | `art_style && props[].reference_image is missing for any importance≥medium` | **06-character-designer** with target=prop | 道具图 |
 | 10 | `clues[].reference_image is missing for any` | **06-character-designer** with target=clue | 线索图 |
@@ -109,7 +109,9 @@ required_tools:
 - 04 必须在 03 之后串行（依赖 episode 剧本）
 - 05 必须在 04 之后（要看角色清单才能推荐画风）
 - 06 必须在 05 之后（要先有画风才能定妆）
-- 但 06 的 character/scene/prop/clue 四个 target **可以并行执行**
+- **06 内部按 weight tier 强制产出视觉四件套**（reference / three_views / avatar / wardrobe），由 [`character.yaml § weight_tier`](../../packages/asset-spec/character.yaml) 约束，不是可选
+- 06 的 character/scene/prop/clue 四个 target **可以并行执行**
+- 单角色内的 reference → three_views/avatar/wardrobe 必须串行（IPAdapter 依赖）
 
 ### Step 7-12 是"单集循环"
 

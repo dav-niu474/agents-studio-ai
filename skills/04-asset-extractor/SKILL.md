@@ -275,11 +275,26 @@ def compute_weight(char, episodes):
     return round(weight)
 ```
 
-`weight ≥ 7` 的角色必须做：完整 6 层锚点 + 全身定妆图 + 三视图 + 头像 + 多套衣橱  
-`weight 4-6` 的角色：6 层锚点 + 全身图 + 头像  
-`weight ≤ 3` 的角色：仅 appearance 描述 + 全身图（不做衣橱）
+### 3.1) Weight Tier → 视觉资产清单（硬性契约）
 
-由 06-character-designer 按 weight 决定生成深度。
+权重档位**直接决定** 06-character-designer 必产的图，由 [`character.yaml § weight_tier`](../../packages/asset-spec/character.yaml) 强制约束：
+
+| Tier | weight | 必产视觉资产（不可省） | 总图数 |
+|---|---|---|---|
+| **A · 主角** | ≥ 7 | reference + three_views + avatar + 全套 wardrobe[]（按 char.wardrobe 数组） | ≥ 5 |
+| **B · 重要配角** | 4–6 | reference + three_views + avatar + wardrobe ≥ 2 套（default + 主要场合） | 5 |
+| **C · 群演** | ≤ 3 | reference + avatar | 2 |
+
+**为什么 three_views / avatar 不能"按需省略"**：
+- three_views 缺失 → 08-keyframe 在生成"侧面 / 背身 / 转头"镜头时无参考，必漂移
+- avatar 缺失 → 09-video 中景/特写镜头面部分辨率不够（短剧 70%+ 镜头是中近景）
+- wardrobe 缺失 → 跨场景换装每次现拼，战斗服时而铠甲时而布衣
+
+如果用户预算紧张，由 **02-show-planner 的 `asset_quality_tier`** 整体降档（economy 仅 Tier-A 保留四件套），**不能在 04 里根据感觉"少给一张"**。
+
+### 3.2) 计算总视觉成本（必须输出）
+
+04 必须在 `visual_asset_plan` 中按角色逐个列出"06 将产几张图"以及总成本估算。这是用户在 02 之后第二个看到具体成本的关卡，让他在 06 真正花钱前还有调整 `asset_quality_tier` 的机会。
 
 ### 4) 场景的"主场景 vs 衍生"
 
@@ -385,14 +400,32 @@ prompt_en: A 16-year-old young woman, oval face with small mole near left eye co
     "props": { "total": 14 },
     "clues": { "total": 2 },
     "all_episodes_updated": true,
+    "visual_asset_plan": {
+      "tier_a_chars": 2,
+      "tier_b_chars": 6,
+      "tier_c_chars": 4,
+      "estimated_image_count": 38,
+      "estimated_image_cost_cny": 18.5,
+      "breakdown": {
+        "char_001 (林小红, weight=10, Tier-A)": { "images": 7, "items": ["reference", "three_views", "avatar", "wardrobe/苏府日常", "wardrobe/宗门修真", "wardrobe/宫廷盛装", "wardrobe/战斗"] },
+        "char_002 (陆寒, weight=9, Tier-A)": { "images": 6, "items": ["reference", "three_views", "avatar", "wardrobe/...×3"] },
+        "char_003 (苏婉柔, weight=8, Tier-A)": { "images": 6 },
+        "char_004 (王嬷嬷, weight=4, Tier-B)": { "images": 5, "items": ["reference", "three_views", "avatar", "wardrobe/default", "wardrobe/外出"] },
+        "...": "..."
+      }
+    },
     "warnings": [
       "char_011 的 weight 仅 1，可考虑合并入 char_007"
     ]
   },
   "artifact_index": "projects/xx/assets/index.json",
-  "next_action_hint": "05-art-director"
+  "next_action_hint": "05-art-director (画风定调) → 06-character-designer (按上述 plan 生 38 张图，约 ¥18.5)"
 }
 ```
+
+> ⚠️ **`visual_asset_plan` 是契约**：04 在这里列出的图，下游 06 必须按此清单全部产出。这不是建议，是基于 weight tier 与 plan.asset_quality_tier 的硬性约定（详见 [`packages/asset-spec/character.yaml § weight_tier`](../../packages/asset-spec/character.yaml)）。
+>
+> 用户在 04 完成后审阅 plan，如果觉得"林小红的 7 张图太奢侈"，应回到 02-show-planner 把 `asset_quality_tier` 从 standard 降到 economy；**不要在 06 里临时省图**。
 
 ---
 

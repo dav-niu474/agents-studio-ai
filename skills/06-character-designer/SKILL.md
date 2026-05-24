@@ -24,25 +24,45 @@ required_tools:
 
 ### `target=character` —— 角色定妆（最复杂、最重要）
 
-依次产出 4 类资产：
+#### 视觉资产是按 weight 强制必产的，不是"可选"
 
-1. **reference.png**（全身定妆图）—— 必生成，是"身份基准"
-2. **three_views.png**（三视图：正面/侧面/背面）—— 推荐生成，用于多镜头侧面/背面镜头
-3. **avatar.png**（头像特写）—— 推荐生成，对话镜头用
-4. **wardrobe/<outfit>.png**（多套服饰）—— 按角色 `wardrobe` 字段逐个生成
+视觉四件套（reference / three_views / avatar / wardrobe）的产出由角色 weight 决定，由 [`packages/asset-spec/character.yaml § weight_tier`](../../packages/asset-spec/character.yaml) 强制约束：
 
-#### 生成顺序（关键！）
+| Tier | weight | reference.png | three_views.png | avatar.png | wardrobe/*.png | 总图数 |
+|---|---|---|---|---|---|---|
+| **A · 主角** | ≥ 7 | ✅ 必产 | ✅ **必产** | ✅ **必产** | ✅ **必产**（按 wardrobe[] 全套）| ≥ 5 |
+| **B · 重要配角** | 4–6 | ✅ 必产 | ✅ **必产** | ✅ **必产** | ✅ **必产**（≥ 2 套：default + 主要场合服）| 5 |
+| **C · 群演** | ≤ 3 | ✅ 必产 | ⚪ 可选 | ✅ **必产** | ❌ 不产（用 reference + 临时换装词）| 2 |
+
+> ⚠️ **为什么 three_views / avatar 不能可选**：
+> - 没有 three_views，08-keyframe 在生成"背身走位 / 侧脸特写 / 转头镜头"时只能从正面图反推 → 必漂
+> - 没有 avatar，09-video 的中景/特写/对话镜头（占短剧 70%+ 镜头）面部分辨率不够 → 必糊
+> - 没有 wardrobe，跨场景换装每次现拼 → 战斗服时而铠甲时而布衣，必崩
+>
+> 如果用户预算紧张，由 02-show-planner 的 `asset_quality_tier=economy` 整体降档（仅主角保留四件套），**不要在 Skill 里"按需省略"**。
+
+#### 严格生成顺序（不可跳过、不可并行）
 
 ```
-Step 1: reference.png  ← 文生图，纯背景，全身正面
+Step 1: reference.png  ← 文生图，纯背景，全身正面（基准图，所有衍生图的 IPAdapter 输入）
         │
-        ↓ 作为参考图
-Step 2: three_views.png ← 图生图，三视图布局
-Step 3: avatar.png      ← 图生图，头像特写
-Step 4: wardrobe/*.png  ← 图生图，换装
+        │  ⚠️ Step 1 一致性 check 不过 → 重试或 needs_review，不要继续
+        ↓
+Step 2: three_views.png ← 图生图，输入 reference.png + "三视图布局" prompt
+Step 3: avatar.png      ← 图生图，输入 reference.png，构图为头肩特写
+Step 4: wardrobe/*.png  ← 图生图，输入 reference.png + 替换 clothing 字段
 ```
 
-**严格按顺序，不要并行 Step 2-4**，否则身份会漂移。Step 1 完成后，Step 2-4 可并行（都以 Step 1 为参考）。
+**Step 2-4 必须以 Step 1 为参考，且必须串行依次生成**。Step 1 完成后 Step 2-4 才允许并行（都以 Step 1 为输入）。
+
+#### 每张图的具体规格
+
+| 图 | 构图 | 分辨率（按 plan.aspect_ratio） | 关键 prompt 要素 |
+|---|---|---|---|
+| reference.png | 全身正面 + T-pose | 9:16 → 1080×1920；16:9 → 1920×1080 | 6 层锚点 + 中性背景 + 标准光照 |
+| three_views.png | 正面/侧面/背面 横向并排 | 与 ratio 适配，宽 ≥ 2400 | "three view sheet, front side back, identical character" |
+| avatar.png | 头肩特写，正脸 | 1024×1024 方图 | 6 层锚点（face_shape / hair_signature 加权）+ neutral expression |
+| wardrobe/<id>.png | 全身展示该 outfit | 与 reference 同 | 仅替换 clothing 字段，其他 5 层锚点保持 |
 
 #### Prompt 拼接公式（全身定妆）
 
@@ -164,10 +184,32 @@ wardrobe:
 
 ## 性能与成本控制
 
-- 单角色全套（4 张图）成本约 ¥1-2（看模型）
-- **批量并行**：N 个角色可并行生成，但单角色内的 4 张图必须串行
-- **画风模型选择**：`recommended_models.image`（来自画风包 style_meta.yaml）按优先级尝试
-- 失败重试上限 = 2，超过让用户决定
+### 单角色成本（按 tier 分级）
+
+| Tier | 图数 | 单角色成本（Seedream 5.0）|
+|---|---|---|
+| A · 主角 | 5+（含 ≥2 套衣橱）| ¥2.5–4.0 |
+| B · 重要配角 | 5（reference + 三视图 + 头像 + 2 套衣橱）| ¥2.0 |
+| C · 群演 | 2（reference + avatar）| ¥0.6 |
+
+典型短剧 12 个角色（2 主 + 5 配 + 5 群）≈ **¥21**。
+
+### 并发与串行约束
+
+- **跨角色并行**：N 个角色可并行处理（不超过 image_channel.concurrency）
+- **单角色内必须串行**：Step 1 → 2/3/4
+- **Step 2-4 之间允许并行**（都以 Step 1 为参考）
+- **失败重试上限 = 2**，超过 flag `needs_review` 不阻塞其他角色
+
+### 画风模型选择
+
+按画风包 `style_meta.yaml.recommended_models.image` 优先级尝试：
+1. primary 失败 → fallback
+2. fallback 失败 → flag `needs_review`，由 Orchestrator 询问用户
+
+### 成本预警
+
+如果该项目所有角色四件套总成本 ≥ ¥30，必须先报给 Orchestrator 由其向用户确认（特别是预算 ≤ ¥1000 的小项目）。
 
 ---
 

@@ -169,6 +169,15 @@ budget_constraints:
   fallback_video_backend: wan-2.6
   
   quality_priority: balanced         # cost_first | balanced | quality_first
+
+  # 视觉资产档位（决定 04 视觉资产规划 + 06 实际产出）
+  asset_quality_tier: standard       # economy | standard | premium
+  # economy:  仅 Tier-A 主角四件套；Tier-B 仅 reference + avatar；Tier-C 仅 reference
+  #           典型 12 角色短剧约 20 张图，¥9
+  # standard: Tier-A 四件套 + 全衣橱；Tier-B 四件套 + 衣橱 ≥ 2 套；Tier-C reference + avatar
+  #           典型 12 角色短剧约 38 张图，¥18（默认）
+  # premium:  全角色按 Tier-A 处理（含群演也做三视图 + 衣橱）
+  #           典型 12 角色短剧约 60 张图，¥30
 ```
 
 **关键认知**：
