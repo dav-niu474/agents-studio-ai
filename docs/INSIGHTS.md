@@ -160,7 +160,7 @@ ArcReel  >  lumenx  >  Pixelle-Video  >  Jellyfish  >  Toonflow  >  huobao-drama
 #### (c) ArcReel 的 compose-video Skill（FFmpeg 拼接）
 - **源**：`ArcReel/agent_runtime_profile/.claude/skills/compose-video/`
 - **形式**：完整的 SKILL.md + `scripts/compose_video.py`，支持按 `transition_to_next` 走 xfade、混 BGM、关闭转场
-- **价值**：这是**真正可执行的 Skill 范例**，含 CLI 用法 / 适用范围 / 转场映射表 / 限制说明。Agents Studio 的 `skills/10-video-composer/` 可以照抄。
+- **价值**：这是**真正可执行的 Skill 范例**，含 CLI 用法 / 适用范围 / 转场映射表 / 限制说明。Agents Studio 的 `skills/12-video-composer/` 可以照抄。
 - **改造工作量**：⭐⭐ (~半天)
 
 #### (d) Toonflow 的画风包结构
@@ -327,9 +327,9 @@ ArcReel  >  lumenx  >  Pixelle-Video  >  Jellyfish  >  Toonflow  >  huobao-drama
 2. **ArcReel 的 Skill+Subagent 模式 + manga-workflow Orchestrator**（已对应到 `skills/00-orchestrator/`）
 3. **huobao-drama 的 Provider Adapter 接口**（已对应到 `packages/adapters/types.ts`）
 4. **Toonflow 的 art_skills 画风包**（已对应到 `art-styles/`）
-5. **lumenx 的 6 阶段 SOP**（已对应到 `skills/01-09` 的编号）
-6. **BigBanana 的关键帧驱动**（已对应到 `skills/06-keyframe-generator/`）
-7. **moyin 的 6 层身份锚点 + @ 引用语法**（已对应到 `skills/04-character-designer/` 的"身份锚点"章节）
+5. **lumenx 的 6 阶段 SOP**（已对应到 `skills/05-09` 的编号，并在前面加了 01-04 的"内容关卡"扩展）
+6. **BigBanana 的关键帧驱动**（已对应到 `skills/08-keyframe-generator/`）
+7. **moyin 的 6 层身份锚点 + @ 引用语法**（已对应到 `skills/06-character-designer/` 的"身份锚点"章节）
 
 ---
 
@@ -379,3 +379,145 @@ ArcReel  >  lumenx  >  Pixelle-Video  >  Jellyfish  >  Toonflow  >  huobao-drama
 > - **强似 BigBanana** 的关键帧驱动 + Project/Season/Episode 三级
 >
 > 这就是 Agents Studio AI 的设计目标。
+
+---
+
+## 10. 短剧行业专业流程认知（v1 → v2 修正）
+
+> 第一版 Skill 设计借鉴了 9 个开源项目的工程模式，但忽略了 **短剧作为一个商业内容品类** 自身的工作流。
+> 经过专业用户反馈，我们做了如下重要修正。这些修正不只影响 Skill 编号，更影响整个 Orchestrator 状态机的本质形态。
+
+### 10.1 修正核心：从"按集走"到"全本理解 + 商业协商 + 全集出剧本"
+
+**v1 错误流程（已废弃）**：
+
+```
+上传小说 → 切章节 → 单集改写剧本 → 单集提资产 → 单集分镜 → ...
+```
+
+这个流程的根本问题：
+- ❌ 切章节这件事本身需要参考集数、单集时长、付费节点等参数 —— 但这些参数还没确定
+- ❌ 单集逐集改写无法管理跨集节奏曲线、CP 互动节奏、付费集卡点
+- ❌ 单集提资产会出现同一角色在不同集描述漂移
+- ❌ 没有"全本理解"步骤，制作方无法做投资决策
+
+**v2 正确流程**：
+
+```
+上传小说
+   ↓
+01-novel-analyst         全本理解（不切章不改写，只输出可改编潜力分析）
+   ↓
+02-show-planner          商业协商（集数 / 横竖屏 / 付费节点 / 平台 / 预算 7 参数）
+   ↓
+03-script-writer         一次性出全集剧本（先大纲再扩写，含章节映射）
+   ↓
+04-asset-extractor       全集一次性资产提取
+   ↓
+... 后续按集制作循环
+```
+
+### 10.2 7 项关键商业参数（必须前置协商）
+
+```yaml
+1. coverage              # 改编章节范围（不是从头改到尾）
+2. episode_format        # 集数 + 单集时长 + 格式类型（vertical_micro / horizontal_short / horizontal_long）
+3. aspect_ratio          # 横竖屏（决定所有下游图像/视频尺寸）
+4. genre + tone          # 类型（题材）+ 风格（调性）— 不要混
+5. paywall               # 付费节点（free_episodes / paywall_at_episode / hook_episodes）
+6. target_platform       # 抖音/快手/优酷/腾讯/西瓜
+7. budget_constraints    # 总预算 + 模型偏好 + 质量优先级
+```
+
+**这 7 项决定了后续每一个 Skill 的输入、约束、输出形态**：
+
+| 参数 | 影响范围 |
+|---|---|
+| aspect_ratio | 06-character-designer 定妆图比例、08-keyframe 宫格布局、09-video 模型参数、12-composer 模板 |
+| episode_format | 03-script-writer 集数和单集时长目标、07-storyboard 镜头节奏 |
+| paywall | 03 付费集 cliffhanger 强度、12 付费集封面与转化文案 |
+| genre + tone | 05-art-director 画风推荐、07 镜头节奏曲线、整剧 BGM 风格 |
+| budget_constraints | 09 视频模型选择、所有 Skill 的并发上限 |
+
+### 10.3 短剧"爆款公式"识别（写进 01-novel-analyst）
+
+01 在分析原著时，必须主动识别以下"爆款元素"并标注章节位置：
+
+| 元素 | 短剧用途 |
+|---|---|
+| **逆袭起点**（屌丝/废柴/重生开局） | 1-2 集开篇钩子 |
+| **打脸高潮**（被低估者反杀） | 付费集首选位置 |
+| **身份反转**（隐藏 boss / 神秘人物揭示真身） | 第 8、20、40 集大节点 |
+| **CP 拉扯**（误会 → 互动 → 心动 → 误解 → 和解） | 整剧情感主线 |
+| **金手指/系统/超能力** | 爽点放大器 |
+| **金句台词** | 标记下来供推广用 |
+
+### 10.4 类型 / 风格 / 题材 / 短剧标签 —— 不能混
+
+| 维度 | 含义 | 示例 |
+|---|---|---|
+| **题材**（era） | 故事发生的世界 | 古代 / 现代 / 民国 / 未来 / 架空 |
+| **类型**（genre） | 叙事范式 | 言情 / 武侠 / 玄幻 / 悬疑 / 战争 |
+| **风格**（tone） | 情感色彩与节奏感 | 爽剧 / 正剧 / 甜宠 / 虐恋 / 喜剧 / 悲剧 |
+| **短剧标签**（micro_drama_tags） | 行业内套路化标签 | 重生 / 打脸 / 扮猪吃虎 / 总裁 / 复仇 / 系统流 / 双男主cp |
+
+**v1 的错误**：把这四个维度混在一起当一个"风格"字段。
+**v2 的修正**：02-show-planner 必须四个维度分别确认。
+
+### 10.5 付费章节是核心商业模型（不可省略）
+
+短剧（特别是竖屏微短剧）的商业模型 **完全依赖付费章节卡点**：
+
+```
+第 1-7 集免费（引流，钩子最强）
+第 8 集开始付费（首付费 = 超级反转 / 大型打脸）
+第 8 集后每 10-20 集一个大反转维持续看付费意愿
+末 5 集可选限免促分享
+```
+
+**v1 没有这个概念**。**v2 把它做成 02-show-planner 的必填参数**，并贯穿到：
+- 03 给付费集生成"超级钩子" cliffhanger
+- 07 给付费集设计"翻天反转"镜头序列
+- 12 给付费集生成转化文案与封面帧
+
+### 10.6 横竖屏不是装饰
+
+| 影响维度 | 9:16 竖屏 | 16:9 横屏 |
+|---|---|---|
+| 06 角色定妆图 | 全身竖图 | 全身横图 + 三视图 |
+| 07 镜头偏好 | 中景/特写/近景多 | 中景/全景多 |
+| 08 宫格图 | 1×N 或 2×3 竖排 | N×1 或 3×2 横排 |
+| 09 视频模型参数 | 1080×1920 | 1920×1080 |
+| 12 输出模板 | templates/1080x1920/ | templates/1920x1080/ |
+
+**v1 的错误**：把 aspect_ratio 当下游运行时参数。**v2 的修正**：作为 02 的必填字段，所有下游 Skill 在拼 prompt / 生成时都引用它。
+
+### 10.7 全集一次性资产提取
+
+资产提取（角色 / 场景 / 道具 / 线索）应该在 **全部剧本生成后一次性完成**，而不是逐集做：
+
+| 维度 | 错误做法（v1） | 正确做法（v2） |
+|---|---|---|
+| 提取时机 | 单集剧本后立刻提 | 全集剧本完成后一次提 |
+| 角色描述 | 各集独立提，事后去重 | 全集统一抽，一次性建库 |
+| 戏份权重 | 无概念 | 按全集出现频次/对白量算 weight 1-10 |
+| 角色合并 | 凭后期判断 | 02-show-planner 已锁定 can_merge_characters |
+| 跨集追踪 | 无机制 | 线索（clue）单独建库，含 state_changes |
+
+### 10.8 修正影响的 Skill 编号（13 个）
+
+| 旧编号（v1 / 11 个） | 新编号（v2 / 13 个） | 变更 |
+|---|---|---|
+| 00-orchestrator | 00-orchestrator | 状态机重写为 13 步 |
+| — | **01-novel-analyst** | ✨ 新增 |
+| — | **02-show-planner** | ✨ 新增 |
+| 01-script-writer | **03-script-writer** | 重写：一次性全集 + 章节映射 + 付费节点 |
+| 02-asset-extractor | **04-asset-extractor** | 重写：去掉 peek/split mode，仅做全集资产 |
+| 03-art-director | 05-art-director | 编号顺延 +2 |
+| 04-character-designer | 06-character-designer | 编号顺延 +2 |
+| 05-storyboard-breaker | 07-storyboard-breaker | 编号顺延 +2 |
+| 06-keyframe-generator | 08-keyframe-generator | 编号顺延 +2 |
+| 07-video-generator | 09-video-generator | 编号顺延 +2 |
+| 08-voice-assigner | 10-voice-assigner | 编号顺延 +2 |
+| 09-tts-synthesizer | 11-tts-synthesizer | 编号顺延 +2 |
+| 10-video-composer | 12-video-composer | 编号顺延 +2 |

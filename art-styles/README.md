@@ -52,7 +52,7 @@ art-styles/<style-id>/
 ## 加载机制
 
 ```python
-# 04-character-designer / 06-keyframe-generator 在拼 prompt 时：
+# 06-character-designer / 08-keyframe-generator 在拼 prompt 时：
 
 art_style = load_art_style(project.art_style_id)
 
@@ -69,7 +69,7 @@ prompt = "\n".join([
 
 ## 自定义画风
 
-如果用户提供自己的参考图，运行时通过 03-art-director 的"模式 C 自定义画风"创建：
+如果用户提供自己的参考图，运行时通过 05-art-director 的"模式 C 自定义画风"创建：
 
 ```
 art-styles/custom/<user_id>__<style_name>/

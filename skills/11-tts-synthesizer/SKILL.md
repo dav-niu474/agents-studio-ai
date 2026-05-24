@@ -71,7 +71,7 @@ for shot in shots:
 - narration 模式整段都是旁白 → 用 `project.narration_voice_id`（在项目设置中预指定）
 
 ### 4) 多语言
-如果 character 有 `target_language` 字段（来自 01-script-writer 的多语翻译），TTS 必须用对应语言的音色。**不要用中文音色读英文文本**（多数 TTS 会失败或拼读异常）。
+如果 character 有 `target_language` 字段（来自 03-script-writer 的多语翻译），TTS 必须用对应语言的音色。**不要用中文音色读英文文本**（多数 TTS 会失败或拼读异常）。
 
 ---
 
@@ -93,7 +93,7 @@ for shot in shots:
 
 ## 音效与 BGM 混音（C4 模块的入口）
 
-每个 shot 的 `sound_effect` 字段（来自 05-storyboard-breaker）：
+每个 shot 的 `sound_effect` 字段（来自 07-storyboard-breaker）：
 
 ```yaml
 sound_effect: 重喘息声 + 心跳加速 + 风吹窗帘
@@ -104,7 +104,7 @@ sound_effect: 重喘息声 + 心跳加速 + 风吹窗帘
 2. 从内置音效库（仿 Pixelle `bgm/`）+ Freesound API 检索匹配音频
 3. 混入 dialogue 轨道，dialogue 优先级 0dB，sfx 默认 -15dB
 
-BGM（背景音乐）由 10-video-composer 在拼接成片时统一加，**不在 shot 级处理**。
+BGM（背景音乐）由 12-video-composer 在拼接成片时统一加，**不在 shot 级处理**。
 
 ---
 
@@ -137,7 +137,7 @@ shot_007.dialogue:
   "warnings": [
     "shot_007: 对白合成后 12.3s，但 video_clip 仅 10s，已用 atempo 压缩到 1.0x"
   ],
-  "next_action_hint": "10-video-composer"
+  "next_action_hint": "12-video-composer"
 }
 ```
 

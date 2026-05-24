@@ -81,7 +81,7 @@ required_tools:
 1. 优先调用支持克隆的供应商（MiniMax / Index-TTS / 火山）
 2. 把音频文件路径写入 `character.cloned_voice_path`
 3. `voice_id` 记为 `cloned:<character_id>` 以示区别
-4. 后续 09-tts-synthesizer 检测到 `cloned:` 前缀会自动调用克隆 API
+4. 后续 11-tts-synthesizer 检测到 `cloned:` 前缀会自动调用克隆 API
 
 ---
 
@@ -93,7 +93,7 @@ required_tools:
 > 我觉得林小红的声音不够温柔，换一个
 ```
 
-Orchestrator → dispatch 08-voice-assigner with `mode=replace, character_id=char_001, exclude=[原voice_id]`：
+Orchestrator → dispatch 10-voice-assigner with `mode=replace, character_id=char_001, exclude=[原voice_id]`：
 
 1. 列出 5 个备选
 2. 调用 `preview_voice` 用同一句台词为每个备选生成 3 秒样片
@@ -116,7 +116,7 @@ Orchestrator → dispatch 08-voice-assigner with `mode=replace, character_id=cha
     ],
     "warnings": []
   },
-  "next_action_hint": "09-tts-synthesizer"
+  "next_action_hint": "11-tts-synthesizer"
 }
 ```
 

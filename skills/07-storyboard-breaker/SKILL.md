@@ -147,7 +147,7 @@ for shot in storyboards:
 
 - `scene_id` **必须**从 `read_storyboard_context` 返回的 `scenes` 中选择
 - 不要凭空创造新场景 ID
-- 如果剧本中明显是新场景但 scene 库没有 → 先 dispatch 02-asset-extractor 补齐再回来
+- 如果剧本中明显是新场景但 scene 库没有 → 先 dispatch 04-asset-extractor 补齐再回来
 
 ---
 
@@ -180,7 +180,7 @@ for shot in storyboards:
     ]
   },
   "artifact_path": "projects/xx/storyboards/episode_1/storyboards.json",
-  "next_action_hint": "06-keyframe-generator"
+  "next_action_hint": "08-keyframe-generator"
 }
 ```
 

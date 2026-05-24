@@ -98,8 +98,8 @@ generation_mode = ?
 
 ```
 GenerationQueue
-├─ image_channel  (concurrency=4, RPM=20)   ← 06-keyframe-generator 用
-└─ video_channel  (concurrency=2, RPM=4)    ← 07-video-generator 用
+├─ image_channel  (concurrency=4, RPM=20)   ← 08-keyframe-generator 用
+└─ video_channel  (concurrency=2, RPM=4)    ← 09-video-generator 用
 ```
 
 为什么：
@@ -175,7 +175,7 @@ GenerationQueue
   "warnings": [
     "shot_007: face cosine 0.51, below threshold - marked for review"
   ],
-  "next_action_hint": "08-voice-assigner"
+  "next_action_hint": "10-voice-assigner"
 }
 ```
 

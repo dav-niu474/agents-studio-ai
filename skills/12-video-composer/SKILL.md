@@ -92,7 +92,7 @@ xfade 滤镜对编码一致性敏感。Step 3 的 normalize 是必需的（否�
 final_audio = mix(
     dialogue_track,    # 0 dB
     bgm_track,         # auto-ducking: 对白时 -18 dB, 其他 -10 dB
-    sfx_track,         # 已在 09-tts-synthesizer 阶段混入 dialogue_track
+    sfx_track,         # 已在 11-tts-synthesizer 阶段混入 dialogue_track
 )
 ```
 

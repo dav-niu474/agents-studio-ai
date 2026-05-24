@@ -5,7 +5,7 @@ description: 国风二次元分镜技法 · 情绪→面容/光影词映射、�
 
 # 国风二次元 · 分镜技法
 
-> 由 06-keyframe-generator / 07-video-generator 在生成 image_prompt 前加载，给 LLM 提供精细的视觉细节注入指南。
+> 由 08-keyframe-generator / 09-video-generator 在生成 image_prompt 前加载，给 LLM 提供精细的视觉细节注入指南。
 >
 > 灵感来源：[Toonflow `art_skills/2D_chinese_guofeng/director_skills/director_storyboard.md`](https://github.com/HBAI-Ltd/Toonflow-app)。
 

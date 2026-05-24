@@ -32,17 +32,19 @@
 - ✅ `docs/INSIGHTS.md` — 9 仓库洞察分析
 - ✅ `docs/ARCHITECTURE.md` — 平台架构蓝图
 - ✅ `docs/ROADMAP.md` — 本文档
-- ✅ `skills/00-orchestrator/SKILL.md` — 编排 Skill
-- ✅ `skills/01-script-writer/SKILL.md` — 剧本生成
-- ✅ `skills/02-asset-extractor/SKILL.md` — 角色/场景/道具提取
-- ✅ `skills/03-art-director/SKILL.md` — 画风定调
-- ✅ `skills/04-character-designer/SKILL.md` — 角色一致性设计
-- ✅ `skills/05-storyboard-breaker/SKILL.md` — 分镜拆解
-- ✅ `skills/06-keyframe-generator/SKILL.md` — 关键帧生成
-- ✅ `skills/07-video-generator/SKILL.md` — 视频片段生成
-- ✅ `skills/08-voice-assigner/SKILL.md` — 角色音色分配
-- ✅ `skills/09-tts-synthesizer/SKILL.md` — TTS 配音
-- ✅ `skills/10-video-composer/SKILL.md` — 视频拼接成片
+- ✅ `skills/00-orchestrator/SKILL.md` — 编排 Skill（13 步状态机）
+- ✅ `skills/01-novel-analyst/SKILL.md` — 全本理解
+- ✅ `skills/02-show-planner/SKILL.md` — 7 参数协商
+- ✅ `skills/03-script-writer/SKILL.md` — 一次性出全集剧本
+- ✅ `skills/04-asset-extractor/SKILL.md` — 全集资产提取
+- ✅ `skills/05-art-director/SKILL.md` — 画风定调
+- ✅ `skills/06-character-designer/SKILL.md` — 角色一致性设计
+- ✅ `skills/07-storyboard-breaker/SKILL.md` — 分镜拆解
+- ✅ `skills/08-keyframe-generator/SKILL.md` — 关键帧生成
+- ✅ `skills/09-video-generator/SKILL.md` — 视频片段生成
+- ✅ `skills/10-voice-assigner/SKILL.md` — 角色音色分配
+- ✅ `skills/11-tts-synthesizer/SKILL.md` — TTS 配音
+- ✅ `skills/12-video-composer/SKILL.md` — 拼接成片
 - ✅ `art-styles/2D-chinese-anime/` — 一个完整的画风包样例
 - ✅ `packages/adapters/types.ts` — Provider Adapter 接口定义（仅类型，无实现）
 - ✅ `packages/asset-spec/character.yaml` — 资产 Spec 样例
@@ -54,10 +56,11 @@
 4. **不要求每一步都真正调用 API**（M0 阶段允许 Agent 用占位输出），但要求 **流程编排正确、状态机切换正确、Skill 之间衔接正确**
 
 ### 验收 DoD
-- [ ] Orchestrator 能从空白项目状态开始，依次 dispatch 11 个 Subagent
+- [ ] Orchestrator 能从空白项目状态开始，依次 dispatch 13 个 Skill（含 M1 内容关卡 / M2 资产关卡 / M3 单集循环）
 - [ ] 每个 Subagent 完成后产出对应的结构化数据（即使是占位）
-- [ ] 用户可以从任意阶段进入（"我已经有剧本了，直接生成分镜"）
+- [ ] 用户可以从任意阶段进入（"我已经有剧本了，直接做第 1 集"）
 - [ ] 所有 Skill 都有 YAML frontmatter 且 description 描述准确
+- [ ] M1 内容关卡的串行依赖正确（01 不出 02 拒绝跑、02 plan 未 locked 03 拒绝跑）
 
 ---
 

@@ -206,21 +206,29 @@ output_schema: ./reference/output.schema.json
 Orchestrator Skill (`00-orchestrator`) 会按下表的 **状态机** 检测项目当前阶段并 dispatch：
 
 ```
-项目状态检测                          → Dispatch 到的 Skill
-────────────────────────────────────────────────────────────────
-源文件已上传 + 章节未切分             → 02-asset-extractor  (peek + 切章)
-章节已切分 + 剧本未生成               → 01-script-writer
-剧本已生成 + 角色/场景未提取          → 02-asset-extractor
-资产已提取 + 画风未确定               → 03-art-director
-画风已确定 + 角色定妆图未生成         → 04-character-designer
-角色定妆完 + 场景/道具图未生成        → 04-character-designer (extend)
-所有资产就位 + 分镜未拆               → 05-storyboard-breaker
-分镜就位 + 关键帧未生成               → 06-keyframe-generator
-关键帧就位 + 视频未生成               → 07-video-generator
-视频就位 + 音色未分配                 → 08-voice-assigner
-音色已分配 + 配音未合成               → 09-tts-synthesizer
-全部就位                              → 10-video-composer (拼接成片)
+项目状态检测                                     → Dispatch 到的 Skill
+─────────────────────────────────────────────────────────────────────
+[M1 内容关卡 — 不可跳过]
+源文件已上传 + 全本未分析                        → 01-novel-analyst
+全本分析完成 + plan 未锁定                       → 02-show-planner（用户协商 7 参数）
+plan 锁定 + 全集剧本未生成                       → 03-script-writer（一次性出 N 集）
+
+[M2 资产关卡]
+全集剧本就位 + 资产未提取                        → 04-asset-extractor（全集一次扫描）
+资产已提取 + 画风未确定                          → 05-art-director
+画风已确定 + 角色定妆未生成                      → 06-character-designer
+所有资产视觉就位                                 → 进入 M3
+
+[M3 单集制作循环（按集 N 重复）]
+第 N 集剧本 + 分镜未拆                           → 07-storyboard-breaker
+第 N 集分镜 + 关键帧未生成                       → 08-keyframe-generator
+第 N 集关键帧 + 视频未生成                       → 09-video-generator
+角色就位 + 音色未分配（仅首次）                  → 10-voice-assigner
+第 N 集音色已分配 + 配音未合成                   → 11-tts-synthesizer
+第 N 集全部就位                                  → 12-video-composer (拼接成片)
 ```
+
+**关键设计**：M1（内容关卡）必须串行通过，没有 plan 没法出剧本；没有剧本没法抽资产；没有资产没法定妆。M3（单集循环）则可按集并行，付费集（is_paywall_hook=true）可优先制作做样片审阅。
 
 详见 `skills/00-orchestrator/SKILL.md`。
 
@@ -228,8 +236,8 @@ Orchestrator Skill (`00-orchestrator`) 会按下表的 **状态机** 检测项�
 
 | 类型 | 职责 | 示例 |
 |---|---|---|
-| **Skill (Markdown)** | 提示词 / 规则 / 流程指引 | `02-asset-extractor/SKILL.md` 写"如何抽取角色" |
-| **Subagent** | 需要多步推理的复杂任务 | `02-asset-extractor` 是个 subagent，主 Agent 只收摘要 |
+| **Skill (Markdown)** | 提示词 / 规则 / 流程指引 | `04-asset-extractor/SKILL.md` 写"如何抽取角色" |
+| **Subagent** | 需要多步推理的复杂任务 | `04-asset-extractor` 是个 subagent，主 Agent 只收摘要 |
 | **Tool (MCP)** | 确定性操作 | `save_dedup_characters` 是一个 MCP tool |
 | **Script (Python/TS)** | 纯计算/IO | `scripts/compose_video.py` 调 ffmpeg |
 
@@ -429,7 +437,7 @@ version: 1
 files:
   - path: skills/00-orchestrator/SKILL.md
     sha256: abc123...
-  - path: skills/05-storyboard-breaker/SKILL.md
+  - path: skills/07-storyboard-breaker/SKILL.md
     sha256: def456...
 ```
 
@@ -557,16 +565,18 @@ templates/
 用户故事："我想从一本小说做一集 2 分钟的短剧"
   │
   ├─ 1. 上传小说 → ProjectManager 创建项目
-  ├─ 2. 对话："帮我做第 1 集"
-  │       └─ Orchestrator 检测 → 02-asset-extractor (章节切分 + 资产提取)
-  │       └─ Orchestrator 检测 → 01-script-writer (生成剧本)
-  │       └─ Orchestrator 检测 → 03-art-director (画风定调)
-  │       └─ Orchestrator 检测 → 04-character-designer (角色定妆)
-  │       └─ Orchestrator 检测 → 05-storyboard-breaker (拆分镜)
-  │       └─ Orchestrator 检测 → 06-keyframe-generator (生成关键帧)
-  │       └─ Orchestrator 检测 → 07-video-generator (视频片段)
-  │       └─ Orchestrator 检测 → 08-voice-assigner + 09-tts-synthesizer
-  │       └─ Orchestrator 检测 → 10-video-composer (FFmpeg 拼接)
+  ├─ 2. 对话："帮我做这个 IP"
+  │       └─ Orchestrator 检测 → 01-novel-analyst (全本理解)
+  │       └─ Orchestrator 检测 → 02-show-planner (协商集数/横竖屏/付费节点等 7 参数)
+  │       └─ Orchestrator 检测 → 03-script-writer (一次性出 N 集剧本)
+  │       └─ Orchestrator 检测 → 04-asset-extractor (全集资产)
+  │       └─ Orchestrator 检测 → 05-art-director (画风定调)
+  │       └─ Orchestrator 检测 → 06-character-designer (角色定妆)
+  │       └─ Orchestrator 检测 → 07-storyboard-breaker (拆分镜)
+  │       └─ Orchestrator 检测 → 08-keyframe-generator (生成关键帧)
+  │       └─ Orchestrator 检测 → 09-video-generator (视频片段)
+  │       └─ Orchestrator 检测 → 10-voice-assigner + 11-tts-synthesizer
+  │       └─ Orchestrator 检测 → 12-video-composer (FFmpeg 拼接)
   ├─ 3. 用户在每个阶段后确认
   └─ 4. 输出 episode_1_final.mp4 + 剪映草稿
 ```

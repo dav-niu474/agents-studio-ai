@@ -190,7 +190,7 @@ for shot in shots:
     "estimated_cost_cny": 5.5
   },
   "artifacts": "projects/xx/storyboards/episode_1/<shot_id>/{start,end}_frame.png",
-  "next_action_hint": "07-video-generator"
+  "next_action_hint": "09-video-generator"
 }
 ```
 

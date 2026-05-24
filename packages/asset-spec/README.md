@@ -67,4 +67,4 @@ sheet_fields:
 | `patch_whitelist` | 允许 PATCH 修改的字段集合（防止误改身份关键字段） |
 | `set_by: <skill-id>` | 该字段由特定 Skill 写入（路由层校验） |
 | `shareable_in_global_library` | 是否纳入全局资产库（跨项目复用） |
-| `consistency_check` | 一致性校验阈值（用于 04-character-designer / 06-keyframe-generator） |
+| `consistency_check` | 一致性校验阈值（用于 06-character-designer / 08-keyframe-generator） |

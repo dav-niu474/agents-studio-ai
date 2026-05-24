@@ -49,7 +49,7 @@ Step 4: wardrobe/*.png  ← 图生图，换装
 ```
 [画风 prefix.md]
 + [art_prompt/art_character.md 模板]
-+ [character.appearance（来自 02-asset-extractor）]
++ [character.appearance（来自 04-asset-extractor）]
 + [identity_anchors 6 层锚点全部展开]
 + "full body, neutral pose, standing, plain neutral background, T-pose preferred"
 + "no background distractions, no other characters"
@@ -116,7 +116,7 @@ wardrobe:
 2. Prompt 在 6 层锚点基础上 **替换 `appearance.clothing`**
 3. 输出 `characters/<id>/wardrobe/<outfit_id>.png`
 
-后续 06-keyframe-generator 会按 shot 的 `outfit_id` 选取对应的衣橱图作为 IPAdapter 参考输入。
+后续 08-keyframe-generator 会按 shot 的 `outfit_id` 选取对应的衣橱图作为 IPAdapter 参考输入。
 
 ---
 
@@ -156,7 +156,7 @@ wardrobe:
     "characters/char_001/wardrobe/casual.png",
     "characters/char_002/reference.png"
   ],
-  "next_action_hint": "05-storyboard-breaker"
+  "next_action_hint": "07-storyboard-breaker"
 }
 ```
 

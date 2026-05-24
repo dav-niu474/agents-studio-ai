@@ -1,6 +1,6 @@
 # 角色定妆词模板 · 国风二次元
 
-> 由 04-character-designer 加载。详细字段被替换为角色 meta 的具体内容。
+> 由 06-character-designer 加载。详细字段被替换为角色 meta 的具体内容。
 
 ---
 

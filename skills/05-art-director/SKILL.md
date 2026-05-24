@@ -13,7 +13,7 @@ required_tools:
 
 > 灵感来源：`lumenx` Step 2 "Art Direction" + `Toonflow` `art_skills/<style>/` 包结构。
 >
-> 画风一旦定下来，会被注入到所有后续生图/生视频的 prompt 前缀里，并在 06-keyframe-generator / 07-video-generator 中提供风格锚点词与负向词。
+> 画风一旦定下来，会被注入到所有后续生图/生视频的 prompt 前缀里，并在 08-keyframe-generator / 09-video-generator 中提供风格锚点词与负向词。
 
 ---
 
@@ -128,7 +128,7 @@ negative_anchors:
 
 ## 提示词注入策略
 
-被 06-keyframe-generator / 07-video-generator 等下游 Skill 使用时：
+被 08-keyframe-generator / 09-video-generator 等下游 Skill 使用时：
 
 ```
 最终 prompt = [画风 prefix] + [资产描述] + [镜头描述] + [画质锁定词]
@@ -155,7 +155,7 @@ negative_anchors:
     "preview_url": "art-styles/2D-chinese-anime/images/preview.png"
   },
   "warnings": [],
-  "next_action_hint": "04-character-designer"
+  "next_action_hint": "06-character-designer"
 }
 ```
 

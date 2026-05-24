@@ -1,6 +1,6 @@
 # 国风二次元（2D Chinese Anime）
 
-> 一个完整的画风包样例。运行时被 03-art-director / 04-character-designer / 06-keyframe-generator / 07-video-generator 加载。
+> 一个完整的画风包样例。运行时被 05-art-director / 06-character-designer / 08-keyframe-generator / 09-video-generator 加载。
 
 ## 适用题材
 
@@ -35,12 +35,12 @@
 | 文件 | 用途 | 谁加载 |
 |---|---|---|
 | `prefix.md` | 全局风格前缀 | 所有图像/视频生成 |
-| `style_meta.yaml` | 元信息 | 03-art-director 推荐时读取 |
-| `art_prompt/art_character.md` | 角色定妆词模板 | 04-character-designer |
-| `art_prompt/art_scene.md` | 场景词模板 | 04-character-designer |
-| `art_prompt/art_prop.md` | 道具词模板 | 04-character-designer |
-| `art_prompt/art_storyboard_video.md` | 视频提示词风格约束 | 07-video-generator |
-| `director_skills/director_storyboard.md` | 分镜技法（情绪→面容词、光影词库） | 06-keyframe-generator / 07-video-generator |
+| `style_meta.yaml` | 元信息 | 05-art-director 推荐时读取 |
+| `art_prompt/art_character.md` | 角色定妆词模板 | 06-character-designer |
+| `art_prompt/art_scene.md` | 场景词模板 | 06-character-designer |
+| `art_prompt/art_prop.md` | 道具词模板 | 06-character-designer |
+| `art_prompt/art_storyboard_video.md` | 视频提示词风格约束 | 09-video-generator |
+| `director_skills/director_storyboard.md` | 分镜技法（情绪→面容词、光影词库） | 08-keyframe-generator / 09-video-generator |
 
 ## 致谢
 
