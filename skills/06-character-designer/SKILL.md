@@ -213,6 +213,62 @@ wardrobe:
 
 ---
 
+## Batch 与候选机制（抽卡）
+
+仿 lumenx 的"抽卡机制"：reference.png 是后续所有衍生图的基准，质量不稳定的话整链路都崩。**关键资产支持 batch_size > 1**：
+
+| 资产 | 默认 batch | 推荐 batch（按 weight） | 说明 |
+|---|---|---|---|
+| **char.reference.png（主角，weight ≥ 7）** | 1 | **3** | 抽卡 3 张让用户挑最佳，定基准 |
+| char.reference.png（配角/群演） | 1 | 1 | 默认 |
+| char.three_views.png | 1 | 1 | 严格依赖 reference，不抽 |
+| char.avatar.png | 1 | 1 | 同上 |
+| char.wardrobe/*.png | 1 | 1 | 同上 |
+| scene.reference.png（主场景） | 1 | 2 | 主场景影响 80%+ 镜头，可抽 |
+| scene.reference.png（衍生场景） | 1 | 1 | 默认 |
+| prop.reference.png（plot_critical 道具） | 1 | 2 | 关键线索道具可抽 |
+| prop.reference.png（普通） | 1 | 1 | 默认 |
+
+### 候选目录结构
+
+```
+characters/<id>/
+  candidates/                           ← 抽卡产物
+    reference_v1.png
+    reference_v2.png
+    reference_v3.png
+  reference.png                         ← 用户挑选后的最终版（symlink 或 copy）
+  three_views.png                       ← 基于已挑选的 reference.png 生成
+  ...
+```
+
+### 用户挑选流程
+
+batch_size > 1 时，**禁止自动选择**：
+1. 生成所有候选到 candidates/ 目录
+2. 输出给 Orchestrator：`status: "needs_pick"`
+3. Orchestrator 把候选展示给用户，等待挑选
+4. 用户挑完 → 升级为 reference.png + 删除其他候选
+5. 然后才进入 Step 2-4（three_views / avatar / wardrobe）
+
+> ⚠️ 不要在 batch 没挑选的情况下提前生成 three_views——必须等 reference 锁定。
+
+---
+
+## 前置状态依赖（readiness_status）
+
+按 [`packages/asset-spec/shot.yaml`](../../packages/asset-spec/shot.yaml) 的状态机：
+
+- 角色资产产出后：每个角色的 meta.json 写入 `readiness_status: assets_complete`
+- 06 启动条件：所有 weight ≥ plan.asset_quality_tier 阈值的角色 meta 已存在（来自 04）
+- 06 完成条件：每个角色的视觉资产按 tier 全部生成完成 + 一致性 check 通过
+
+如果用户后续改了某角色的 `appearance` 或 `identity_anchors`：
+- 该角色所有视觉资产 invalidate（reference / three_views / avatar / wardrobe）
+- 所有引用该角色的 shot 状态回退到 `storyboard_locked`（详见 shot.yaml § rollback_rules）
+
+---
+
 ## 反模式
 
 ❌ 跳过 Step 1 直接生成三视图/头像（无参考图，必漂移）  

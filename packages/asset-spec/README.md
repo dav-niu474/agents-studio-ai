@@ -8,10 +8,11 @@
 
 | Spec | 用途 | 跨项目共享 |
 |---|---|---|
-| [`character.yaml`](./character.yaml) | 角色（含 6 层身份锚点 + 衣橱） | ✅ |
+| [`character.yaml`](./character.yaml) | 角色（含 6 层身份锚点 + 衣橱 + weight_tier 视觉资产契约） | ✅ |
 | [`scene.yaml`](./scene.yaml) | 场景 | ✅ |
 | [`prop.yaml`](./prop.yaml) | 道具 | ✅ |
 | [`clue.yaml`](./clue.yaml) | 线索（跨镜追踪关键元素） | ❌（通常项目专属） |
+| [`shot.yaml`](./shot.yaml) | 分镜 + Readiness 状态机（核心契约，跨 07/08a/08/09/11/12 共享） | ❌（项目专属） |
 
 ## 加载
 

@@ -20,6 +20,102 @@ required_tools:
 
 ---
 
+## 前置状态依赖（readiness_status）
+
+按 [`shot.yaml § state_transitions`](../../packages/asset-spec/shot.yaml)，09 的启动条件分两种：
+
+### 路径 A · 标准（依赖 08）
+```
+shot.readiness_status == keyframes_locked
+```
+即 08 已生成关键帧并由用户挑选（或单 batch 自动通过）。
+
+### 路径 B · reference_video 跳过 08（来自 08a）
+```
+keyframe_plan.shot_plans[i].mode == "reference_video"
+AND shot.readiness_status == plan_locked
+```
+跳过 08，09 直接用 character/scene/prop reference.png 生视频。
+
+### 路径 C · multi_shot 合并（仅 Seedance 2.0）
+```
+keyframe_plan.shot_plans[i].mode == "multi_shot"
+AND 该 merge_group 中所有 shot 的 readiness_status >= plan_locked
+```
+把 2-4 个相邻 shot 合并为一次视频生成调用。
+
+**检测条件**：09 启动前先按 readiness_status 分组：
+- `video_pending` 状态的 shot 才进队
+- 跨 shot 的 multi_shot 组要等组内全部就位才一起生
+
+---
+
+## Batch 与候选机制（抽卡）
+
+视频比关键帧贵 5-10 倍，**默认 batch_size=1**。但 08a 会标记几类必须 batch：
+
+| batch_size | 适用 | 单 shot 成本估算（Seedance）|
+|---|---|---|
+| 1（默认） | 普通 shot | ¥1.5 |
+| 2 | 大节点 climax shot | ¥3 |
+| 3 | 付费集 cliffhanger shot（最后一个）| ¥4.5 |
+
+> 视频 batch ≥ 4 几乎无意义（成本爆炸但边际收益小），08a 的 plan 不会推荐。
+
+### 候选目录
+
+```
+storyboards/episode_8/shot_011/
+  candidates/
+    clip_v1.mp4
+    clip_v2.mp4
+    clip_v3.mp4
+  clip.mp4                            ← 用户挑选后升级
+```
+
+### 流程
+
+```
+for shot_plan in keyframe_plan.shot_plans:
+    if shot.readiness_status not in (keyframes_locked, plan_locked@reference_video):
+        skip
+        continue
+
+    candidates = []
+    for i in range(shot_plan.batch_size):
+        prompt = compose_video_prompt(shot, mode, backend, seed=i*1000)
+        result = submit_video_task(prompt, frames, backend)
+        candidates.append(result)
+
+    quality_results = [check_video_quality(c, shot) for c in candidates]
+
+    if shot_plan.batch_size == 1:
+        if quality_results[0].passed:
+            save_locked(candidates[0])
+            update_readiness(shot, "video_locked")
+        else:
+            mark_for_review(shot, quality_results[0].issues)
+    else:
+        save_candidates(shot, candidates, quality_results)
+        update_readiness(shot, "video_candidates")
+        # 等待用户挑选（batch ≥ 2 永不自动挑）
+```
+
+### 用户挑选
+
+| batch | 行为 |
+|---|---|
+| 1 | 通过 → 锁定；不通过 → needs_review |
+| 2-3 | **必须**用户挑选（视频成本高，不能 AI 替决策） |
+
+### 状态机更新
+
+- `keyframes_locked → video_pending`（入队）
+- `video_pending → video_candidates`（batch > 1）或 `video_locked`（batch=1 且通过）
+- 用户挑选 → `video_locked`
+
+---
+
 ## 输入分支（按 generation_mode）
 
 ```

@@ -31,7 +31,7 @@ required_tools:
 
 ---
 
-## 全流程地图（13 步）
+## 全流程地图（14 步，含 08a 关键帧规划）
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
@@ -43,15 +43,16 @@ required_tools:
 │  M2. 资产准备阶段                                                   │
 │     04-asset-extractor 全集一次性资产提取                          │
 │     05-art-director    画风定调                                    │
-│     06-character-designer  角色/场景/道具定妆                      │
+│     06-character-designer  角色/场景/道具定妆（按 weight tier）   │
 │                                                                     │
 │  M3. 单集制作循环（按集 N 重复）                                   │
-│     07-storyboard-breaker  拆分镜                                  │
-│     08-keyframe-generator  关键帧                                  │
-│     09-video-generator     视频片段                                │
-│     10-voice-assigner      音色分配（仅首次）                      │
-│     11-tts-synthesizer     TTS 配音                                │
-│     12-video-composer      拼接成片 + 付费集封面                   │
+│     07-storyboard-breaker   拆分镜（标记 mergeable + intensity）  │
+│     08a-keyframe-planner    Pre-flight 方案审阅（每 shot 选 mode）│
+│     08-keyframe-generator   生成关键帧（候选 + 用户挑选）         │
+│     09-video-generator      视频片段（候选 + 用户挑选）           │
+│     10-voice-assigner       音色分配（仅首次）                     │
+│     11-tts-synthesizer      TTS 配音                               │
+│     12-video-composer       Logo + Recap + 拼接 + Tease + 字幕烧录│
 └────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -74,12 +75,15 @@ required_tools:
 | 8 | `art_style && scenes[].reference_image is missing for any main scene` | **06-character-designer** with target=scene | 场景图 |
 | 9 | `art_style && props[].reference_image is missing for any importance≥medium` | **06-character-designer** with target=prop | 道具图 |
 | 10 | `clues[].reference_image is missing for any` | **06-character-designer** with target=clue | 线索图 |
-| 11 | `episodes[N].script && !episodes[N].storyboards` | **07-storyboard-breaker** with episode_id=N | 分镜（按集） |
-| 12 | `storyboards[].keyframes is missing for any in episode N` | **08-keyframe-generator** with episode_id=N | 关键帧（按集） |
-| 13 | `storyboards[].video_clip is missing for any in episode N` | **09-video-generator** with episode_id=N | 视频（按集） |
+| 11 | `episodes[N].script && shots[].readiness < storyboard_locked for any` | **07-storyboard-breaker** with episode_id=N | 分镜（按集） |
+| 11.5 | `episodes[N].shots all storyboard_locked && !keyframe_plan.yaml.locked` | **08a-keyframe-planner** with episode_id=N | 关键帧方案审阅 |
+| 12 | `episodes[N].keyframe_plan.locked && shots[].readiness < keyframes_locked for any` | **08-keyframe-generator** with episode_id=N | 关键帧（按集） |
+| 12.5 | `shots[].readiness == keyframes_candidates for any` | （无）— 等用户从 candidates/ 挑选 | 候选挑选 |
+| 13 | `shots[].readiness == keyframes_locked && < video_locked for any in episode N` | **09-video-generator** with episode_id=N | 视频（按集） |
+| 13.5 | `shots[].readiness == video_candidates for any` | （无）— 等用户挑选 | 视频候选挑选 |
 | 14 | `characters[].voice_id is missing for any speaking character` | **10-voice-assigner** | 音色（仅首次） |
-| 15 | `episodes[N].dialogue && episodes[N].audio is missing` | **11-tts-synthesizer** with episode_id=N | 配音（按集） |
-| 16 | `episodes[N].output is missing && all storyboards complete` | **12-video-composer** with episode_id=N | 成片（按集） |
+| 15 | `episodes[N].dialogue && shots[].readiness < audio_locked for any` | **11-tts-synthesizer** with episode_id=N | 配音（按集） |
+| 16 | `episodes[N].output is missing && shots[].readiness all == shot_ready` | **12-video-composer** with episode_id=N | 成片（按集） |
 | 17 | 所有集完成 | （无）— 报告全剧完成 | 收尾 |
 
 ---
@@ -334,10 +338,11 @@ Subagent 返回：
             ├──→ 05-art-director
             ├──→ 06-character-designer ──→ (并行) chars/scenes/props/clues
    ── 单集制作循环 (M3, 按集 N 重复) ──────────────────────
-            ├──→ 07-storyboard-breaker (episode_id=N)
-            ├──→ 08-keyframe-generator (episode_id=N, 批量并行)
-            ├──→ 09-video-generator    (episode_id=N, 批量并行)
+            ├──→ 07-storyboard-breaker (episode_id=N, 标记 mergeable + intensity)
+            ├──→ 08a-keyframe-planner  (episode_id=N, Pre-flight 方案审阅, ⚠️ 用户审)
+            ├──→ 08-keyframe-generator (episode_id=N, 批量并行, batch>1 等用户挑)
+            ├──→ 09-video-generator    (episode_id=N, 批量并行, batch>1 等用户挑)
             ├──→ 10-voice-assigner     (仅首次)
             ├──→ 11-tts-synthesizer    (episode_id=N, 批量并行)
-            └──→ 12-video-composer     (episode_id=N, utility)
+            └──→ 12-video-composer     (episode_id=N, Logo+Recap+Body+Tease+Outro+字幕)
 ```

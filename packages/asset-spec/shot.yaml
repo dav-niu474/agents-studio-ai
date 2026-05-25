@@ -1,0 +1,165 @@
+## Shot Spec
+##
+## 灵感来源：huobao-drama 的 17 字段分镜 + Jellyfish 的 Shot Readiness 状态机
+##
+## 这是 shot 的中央 schema。每个 shot 在制作过程中会经历多个状态，
+## 上下游 skill 通过 readiness_status 字段决定该 shot 是否可以进入下一阶段。
+##
+## ⚠️ 状态判断不能靠"文件存不存在"。例如：用户改了对白后，video_clip 文件还在但
+## 已经过时，必须把 readiness_status 回退到 audio_pending，让 11 重生 audio 后
+## 12 才能拼接。
+
+asset_type: shot
+storage_bucket: storyboards/episode_<N>/<shot_id>/
+file_layout:
+  meta: meta.json                           # shot 元数据 + 状态
+  candidates:                               # 候选目录（抽卡机制）
+    keyframes:
+      reference: candidates/start_*.png     # batch_size 张候选
+      end: candidates/end_*.png
+    grid: candidates/grid_*.png
+    video: candidates/clip_*.mp4
+    audio: candidates/audio_*.wav
+  locked:                                   # 用户挑选后的最终版（locked）
+    start_frame: start_frame.png
+    end_frame: end_frame.png                # 仅 first_last 模式
+    grid: grid.png                          # 仅 grid_* 模式
+    clip: clip.mp4
+    audio: audio.wav
+
+# 17 字段（来自 huobao-drama 标准）
+sheet_fields:
+  shot_id: { type: string, required: true }
+  title: { type: string, max_length: 8 }
+  scene_id: { type: string, required: true }
+  sequence: { type: int, required: true }
+
+  # === 镜头语言 ===
+  shot_type: { type: enum, values: [wide, full, medium, close_up, extreme_close_up] }
+  angle: { type: enum, values: [eye_level, high_angle, low_angle, dutch, over_shoulder] }
+  movement: { type: enum, values: [static, push_in, pull_out, pan, tilt, tracking, handheld] }
+
+  # === 时空 ===
+  location: { type: string }
+  time_of_day: { type: string }
+  duration_sec: { type: number, min: 3, max: 15 }
+
+  # === 内容 ===
+  character_ids: { type: array<string> }
+  character_outfits: { type: object }
+  prop_ids: { type: array<string> }
+  clue_ids: { type: array<string> }
+  action: { type: text }
+  dialogue: { type: array<object> }
+  visual_result: { type: text }
+  atmosphere: { type: text }
+
+  # === 提示词 ===
+  image_prompt: { type: text, set_by: 08a-keyframe-planner }
+  video_prompt: { type: text }
+  bgm_prompt: { type: text }
+  sound_effect: { type: text }
+
+  # === 节奏与转场 ===
+  intensity: { type: int, min: 1, max: 10, set_by: 07-storyboard-breaker }
+  beat_role: { type: enum, values: [cold_open, hook, rising, climax, cliffhanger, normal], set_by: 07 }
+  transition_to_next: { type: enum, values: [cut, fade, dissolve, wipe] }
+
+  # === 合并候选标记（07 写入，08a 读取）===
+  mergeable_with_next: { type: bool, set_by: 07 }
+  merge_group_id: { type: string, nullable: true, set_by: 08a }
+
+  # === 生成模式（08a 写入）===
+  generation_mode: { type: enum, values: [image2video, first_last, grid_4, grid_6, grid_9, reference_video, multi_shot], set_by: 08a-keyframe-planner }
+  batch_size: { type: int, min: 1, max: 9, default: 1, set_by: 08a }
+  locked: { type: bool, default: false, set_by: 08a }   # locked=true 表示用户不可降档
+
+# Readiness 状态机（核心）
+# 仿 Jellyfish：preparing 与 generating 解耦
+readiness_status:
+  type: enum
+  required: true
+  default: script_locked
+  values:
+    - script_locked            # 03 写完，对白与动作锁定
+    - assets_assigned          # 04 资产 ID 填入 character_ids/scene_id/prop_ids
+    - storyboard_locked        # 07 拆分镜完成，17 字段齐全
+    - plan_locked              # 08a Pre-flight 方案审完，generation_mode/batch 确定
+    - keyframes_pending        # 08 进队但未完成
+    - keyframes_candidates     # 08 已生成 batch 候选，等用户挑选
+    - keyframes_locked         # 用户已挑选，准备进 09
+    - video_pending            # 09 进队
+    - video_candidates         # 09 已生成 batch 候选
+    - video_locked             # 用户已挑选
+    - audio_pending            # 11 进队
+    - audio_locked             # 11 完成
+    - shot_ready               # 全部资产齐全，可进 12 拼接
+    - needs_review             # 自动质检不通过，需用户审
+    - failed                   # 重试耗尽，需用户决策
+
+# 状态转换规则（哪个 skill 可以把状态推进到哪里）
+state_transitions:
+  03-script-writer: { writes: script_locked }
+  04-asset-extractor: { reads: script_locked, writes: assets_assigned }
+  07-storyboard-breaker: { reads: assets_assigned, writes: storyboard_locked }
+  08a-keyframe-planner:
+    reads: storyboard_locked
+    writes: plan_locked
+    require: { all_referenced_assets_have_visual: true }   # 06 必须先做完
+  08-keyframe-generator:
+    reads: plan_locked
+    writes: keyframes_pending → keyframes_candidates
+    require: { keyframe_plan_locked: true }
+  user_pick_keyframe: { reads: keyframes_candidates, writes: keyframes_locked }
+  09-video-generator:
+    reads: keyframes_locked OR (plan_locked AND mode == reference_video)
+    writes: video_pending → video_candidates
+  user_pick_video: { reads: video_candidates, writes: video_locked }
+  11-tts-synthesizer:
+    reads: storyboard_locked        # 不依赖 keyframes/video，可早跑
+    writes: audio_pending → audio_locked
+  shot_ready_check:
+    reads: video_locked AND audio_locked
+    writes: shot_ready
+
+# 反向状态回滚（关键！）
+# 用户改剧本/分镜后必须把下游状态回滚
+rollback_rules:
+  on_script_change:
+    rollback_from: any
+    rollback_to: script_locked
+    invalidates: [keyframes, video, audio]
+  on_storyboard_change:
+    rollback_from: any
+    rollback_to: storyboard_locked
+    invalidates: [keyframe_plan, keyframes, video, audio]
+  on_keyframe_plan_change:
+    rollback_from: any_after_plan_locked
+    rollback_to: plan_locked
+    invalidates: [keyframes, video]
+  on_keyframe_change:
+    rollback_from: any_after_keyframes_locked
+    rollback_to: keyframes_locked
+    invalidates: [video]
+  on_outfit_change:                    # 用户改了某 character 的 outfit 选择
+    rollback_from: any_after_keyframes_locked
+    rollback_to: storyboard_locked     # 注意：不仅 keyframe 要重做，shot 的 outfit 字段也变了
+    invalidates: [keyframes, video]
+
+# 一致性检查阈值（按生成模式不同）
+consistency_check:
+  keyframes_candidates:
+    face_similarity_vs_character_reference: 0.7
+    color_palette_delta_e: 25
+    art_style_clip_score: 0.5
+  video_candidates:
+    face_similarity_sample_5_frames: 0.55
+    duration_deviation: 0.10           # ±10%
+    black_frame_ratio: 0.05            # < 5%
+
+# 反模式
+anti_patterns:
+  - 用文件存在性判断 readiness（应读 readiness_status 字段）
+  - 用户改 dialogue 后不回滚 video（结果 audio 重生但视频还是旧台词的口型）
+  - 跳过 plan_locked 直接 keyframes_pending（08a 没过审就进 08）
+  - 让 12-video-composer 接收 readiness != shot_ready 的 shot（必须等齐）

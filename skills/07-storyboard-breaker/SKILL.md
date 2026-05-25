@@ -67,6 +67,17 @@ sound_effect: 重喘息声 + 心跳加速 + 风吹窗帘
 
 # === 转场到下一镜 ===
 transition_to_next: cut          # cut / fade / dissolve / wipe
+
+# === 节奏与合并候选标记（08a 必读）===
+intensity: 8                     # 1-10，从 03.intensity_curve 继承到 shot 级
+beat_role: rising                # cold_open / hook / rising / climax / cliffhanger / normal
+mergeable_with_next: false       # 是否可与下一 shot 合并为 grid/multi_shot
+                                 # 满足以下全部条件时设 true：
+                                 #   - 同 scene_id
+                                 #   - 同 character_ids（主角集合一致）
+                                 #   - 时间连续（sequence 连续）
+                                 #   - 镜头语言相近（不要把 wide 和 close_up 标 mergeable）
+                                 #   - 不是 climax 或 cliffhanger（关键 shot 必须独立精控）
 ```
 
 ---
@@ -148,6 +159,47 @@ for shot in storyboards:
 - `scene_id` **必须**从 `read_storyboard_context` 返回的 `scenes` 中选择
 - 不要凭空创造新场景 ID
 - 如果剧本中明显是新场景但 scene 库没有 → 先 dispatch 04-asset-extractor 补齐再回来
+
+---
+
+## 合并候选检测（为 08a 准备）
+
+07 的核心新职责（v2）：在拆完分镜后，**对每对相邻 shot 标记 `mergeable_with_next`**。这是 08a 决定走 grid 还是单 shot 的输入。
+
+```python
+def mark_mergeable(shots):
+    for i in range(len(shots) - 1):
+        a, b = shots[i], shots[i+1]
+        a.mergeable_with_next = (
+            a.scene_id == b.scene_id
+            and set(a.character_ids) == set(b.character_ids)
+            and a.beat_role not in ("climax", "cliffhanger")
+            and b.beat_role not in ("climax", "cliffhanger")
+            and abs(a.shot_type_to_int() - b.shot_type_to_int()) <= 1   # 镜头语言不能跨度太大
+            and a.character_outfits == b.character_outfits              # 同套衣橱
+        )
+    shots[-1].mergeable_with_next = false   # 最后一个 shot 永远 false
+```
+
+08a 在做 grid 合并时，会从 `mergeable_with_next == true` 的连续段提取最长合并组（最多 9 个）。
+
+### `intensity` 字段的来源
+
+`intensity` 不是 07 凭空判断的，而是从 03-script-writer 的 `intensity_curve`（每集级）继承下来，再在 shot 级微调：
+
+```python
+shot.intensity = clamp(
+    episode.intensity                                     # 该集基础强度（来自 03）
+    + (3 if shot.beat_role == "climax" else 0)
+    + (2 if shot.beat_role == "cliffhanger" else 0)
+    + (1 if shot.beat_role == "hook" else 0)
+    - (1 if shot.beat_role == "cold_open" else 0)
+    - (2 if shot.beat_role == "normal" else 0),
+    1, 10
+)
+```
+
+`intensity ≥ 9` 的 shot 会被 08a 自动 `locked: true`（不允许降档）。
 
 ---
 

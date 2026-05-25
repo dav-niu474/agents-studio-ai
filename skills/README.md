@@ -1,12 +1,12 @@
 # Agents Studio · Skills
 
-> 一套 13 个 Markdown SKILL.md，把"小说 → 短剧成片"的全流程拆成可并行调度的 Subagent。
+> 一套 14 个 Markdown SKILL.md，把"小说 → 短剧成片"的全流程拆成可并行调度的 Subagent。
 >
 > **现在就能用**：把整个 `skills/` 目录拷进任意支持 Skill 协议的 Agent Runtime（Claude Agent SDK / Cursor / Cline / Kiro），不需要后端就能跑通 70% 的流程。
 
 ---
 
-## 13 个 Skill 一览
+## 14 个 Skill 一览
 
 ```
 M1 · 内容理解阶段（不可跳过）
@@ -20,16 +20,17 @@ M2 · 资产准备阶段
 ─────────────────────────────────────────────────────
 04 asset-extractor      — 全集一次性资产提取
 05 art-director         — 画风定调
-06 character-designer   — 角色/场景/道具/线索定妆
+06 character-designer   — 角色/场景/道具/线索定妆（按 weight tier 强制 + 主角抽卡）
 
 M3 · 单集制作循环（按集 N 重复）
 ─────────────────────────────────────────────────────
-07 storyboard-breaker   — 拆分镜
-08 keyframe-generator   — Start/End/宫格关键帧
-09 video-generator      — 视频片段
+07 storyboard-breaker   — 拆分镜（标记 mergeable_with_next + intensity）
+08a keyframe-planner    — Pre-flight 方案审阅（每 shot 选 mode + batch）
+08 keyframe-generator   — 生成关键帧（候选 + 用户挑选）
+09 video-generator      — 视频片段（候选 + 用户挑选）
 10 voice-assigner       — 音色分配（仅首次）
 11 tts-synthesizer      — TTS 配音
-12 video-composer       — 拼接成片
+12 video-composer       — Logo + Recap + 拼接 + Tease + 字幕烧录
 ```
 
 ---
@@ -47,11 +48,14 @@ M3 · 单集制作循环（按集 N 重复）
 | 资产已提取 + 画风未确定 | **05-art-director** |
 | 画风已确定 + 资产视觉缺失 | **06-character-designer** |
 | 第 N 集剧本就位 + 分镜未拆 | **07-storyboard-breaker** with episode_id=N |
-| 第 N 集分镜就位 + 关键帧缺失 | **08-keyframe-generator** with episode_id=N |
-| 第 N 集关键帧就位 + 视频缺失 | **09-video-generator** with episode_id=N |
+| 第 N 集分镜就位 + 关键帧方案未审 | **08a-keyframe-planner** with episode_id=N |
+| 第 N 集方案 locked + 关键帧缺失 | **08-keyframe-generator** with episode_id=N |
+| 第 N 集关键帧候选生成 + 用户未挑（batch>1） | **等用户挑选**（不 dispatch） |
+| 第 N 集关键帧 locked + 视频缺失 | **09-video-generator** with episode_id=N |
+| 第 N 集视频候选生成 + 用户未挑（batch>1） | **等用户挑选**（不 dispatch） |
 | 角色就位 + 音色未分配 | **10-voice-assigner** |
 | 第 N 集音色已分配 + 配音缺失 | **11-tts-synthesizer** with episode_id=N |
-| 第 N 集全部就位 | **12-video-composer** with episode_id=N |
+| 第 N 集所有 shot.readiness == shot_ready | **12-video-composer** with episode_id=N |
 
 ---
 

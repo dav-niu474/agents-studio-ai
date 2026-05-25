@@ -19,6 +19,26 @@ required_tools:
 
 ---
 
+## 前置依赖：08a-keyframe-planner（不可跳过）
+
+**08 启动前必须存在 `storyboards/episode_<N>/keyframe_plan.yaml` 且 `locked: true`**。
+
+这个 plan 由 [08a-keyframe-planner](../08a-keyframe-planner/SKILL.md) 在用户审核后产出，对每个 shot 指定：
+- `generation_mode`（image2video / first_last / grid_4/6/9 / reference_video）
+- `batch_size`（1-9）
+- `merge_group_id`（如果走 grid，哪些 shot 合并成一张宫格）
+- `locked: true/false`（付费集 cliffhanger 等关键 shot 不可降档）
+
+**08 不允许内部决定 generation_mode 或 batch_size**——所有决策都来自 plan。
+
+如果 plan 不存在或未 locked → 立即停止，让 Orchestrator 先去跑 08a。
+
+如果 plan.shot_plans[i].mode == `reference_video` → 跳过该 shot，由 09 直接生视频。
+
+如果 plan.shot_plans[i].mode == `multi_shot` → 跳过该 shot 的关键帧（multi_shot 在 09 里一次性处理）。
+
+---
+
 ## 三种关键帧模式（generation_mode 决定）
 
 ### Mode 1 · `image2video`（默认，最稳）
@@ -196,10 +216,85 @@ for shot in shots:
 
 ---
 
-## 反模式
+## Batch 与候选机制（抽卡）
 
-❌ 不传 IPAdapter 参考图（角色必漂移）  
-❌ 宫格图模式下 prompt 不写 `exactly N visible panels`（模型会偷偷少格）  
-❌ 切分宫格不做尺寸对齐（导致每格尺寸不一致）  
-❌ 一致性检查失败时不重试就保存（污染下游视频生成）  
-❌ 跨场景混入同一宫格（场景视觉风格冲突）
+**batch_size 由 08a 决定**，08 严格按 plan.shot_plans[i].batch_size 执行：
+
+| batch_size | 来源 | 适用 |
+|---|---|---|
+| 1（默认） | 普通 shot | 大多数对话/叙事镜头 |
+| 3 | 付费集 cliffhanger / 大节点 climax | 关键转化镜头，必须抽卡选最佳 |
+| 5 | 大节点付费集（ep8/20/40 等）的 cliffhanger | 极致保险，5 选 1 |
+| 9 | 罕见，只有"决战集"用 | 超级关键转化时刻 |
+
+### 候选目录与挑选
+
+```
+storyboards/episode_8/shot_011/
+  candidates/                          ← 08 产出
+    start_v1.png
+    start_v2.png
+    start_v3.png
+    start_v4.png
+    start_v5.png                       # batch=5 出 5 张
+    end_v1.png ... end_v5.png          # first_last 模式
+  start_frame.png                      ← 用户挑选后升级（symlink）
+  end_frame.png                        ← 同上
+```
+
+### 流程
+
+```
+for shot_plan in keyframe_plan.shot_plans:
+    if shot_plan.mode in ("reference_video", "multi_shot"):
+        skip                                    # 09 处理
+        continue
+
+    # 1. 生成 batch_size 张候选
+    candidates = []
+    for i in range(shot_plan.batch_size):
+        result = submit_image_task(prompt, ref_images, seed=i*1000)
+        candidates.append(result)
+
+    # 2. 自动一致性检查（每张）
+    passed = [c for c in candidates if check_consistency(c) >= threshold]
+
+    # 3. 决定路径
+    if shot_plan.batch_size == 1:
+        if len(passed) == 0:
+            mark_for_review(shot_id, reason="single batch failed consistency")
+        else:
+            save_locked(passed[0])              # 直接锁定，状态推进到 keyframes_locked
+    else:
+        # batch_size > 1：必须等用户挑选
+        save_candidates(shot_id, candidates)
+        update_readiness(shot_id, "keyframes_candidates")
+        # 不自动挑选！等待 Orchestrator 收到用户挑选指令
+```
+
+### 自动挑选 vs 用户挑选
+
+| batch_size | 行为 |
+|---|---|
+| 1 | 一致性 check 通过则直接 lock；不通过则 needs_review |
+| 2-3 | 优先策略：(a) 一致性最高分自动 lock（如果分差 > 0.1）；(b) 否则 escalate 给用户 |
+| ≥ 4 | **必须**等用户挑选，08 不自动决定 |
+
+**locked: true 的 shot 永远等用户挑选**（付费集 cliffhanger 不能让 AI 替你挑）。
+
+### 状态机更新
+
+按 [`shot.yaml § state_transitions`](../../packages/asset-spec/shot.yaml)：
+
+- 进入 08：`plan_locked → keyframes_pending`
+- 生成完成：`keyframes_pending → keyframes_candidates`（batch > 1）或直接 `keyframes_locked`（batch=1 且通过）
+- 用户挑选完：`keyframes_candidates → keyframes_locked`
+
+---
+
+## 反模式（Batch 相关）
+
+❌ batch_size > 1 时擅自挑选最佳那张就 lock（除非 batch ≤ 3 且分差 > 0.1）  
+❌ 一致性检查没全过就 lock（应至少自动重试 1 次再 escalate）  
+❌ 付费集 cliffhanger 跳过用户挑选（即使分差大也必须人工选）  
+❌ 候选挑完不删除其他候选（占磁盘 + 后续可能误用旧版本）
